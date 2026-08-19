@@ -1,4 +1,5 @@
-"""tracksnap CLI — Stateful URL and feed change tracker — remembers what it's seen, shows only what's new."""
+"""tracksnap CLI — stateful RSS/Atom feed tracker."""
+from __future__ import annotations
 
 import sys
 
@@ -19,17 +20,29 @@ def _handle_acli_command(cmd: str) -> None:
 
 @click.command()
 @click.argument("url", required=False, default=None)
-@click.option("--limit", "-n", default=10, show_default=True, help="How many items to fetch.")
 @click.option(
-    "--output",
-    "-o",
-    default="text",
-    show_default=True,
+    "--limit", "-n",
+    default=10, show_default=True,
+    help="Max items to return.",
+)
+@click.option(
+    "--output", "-o",
+    default="text", show_default=True,
     type=click.Choice(["text", "json", "table", "csv"]),
     help="Output format.",
 )
-def main(url, limit, output):
-    """Stateful URL and feed change tracker — remembers what it's seen, shows only what's new.
+@click.option(
+    "--all", "all_items",
+    is_flag=True,
+    help="Show all items, not just new ones.",
+)
+@click.option(
+    "--reset",
+    is_flag=True,
+    help="Clear history for this URL, then show all items.",
+)
+def main(url, limit, output, all_items, reset):
+    """Stateful RSS/Atom feed tracker — shows only items you haven't seen yet.
 
     Special commands: tracksnap introspect | tracksnap skill
     """
@@ -37,7 +50,11 @@ def main(url, limit, output):
         _handle_acli_command(url)
         sys.exit(0)
 
-    items = fetch(url, limit=limit)
+    if not url:
+        click.echo("Error: URL is required.", err=True)
+        sys.exit(1)
+
+    items = fetch(url, limit=limit, all_items=all_items, reset=reset)
 
     if output == "text":
         click.echo(to_text(items))
